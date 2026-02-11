@@ -3,6 +3,12 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <algorithm>   // std::min, std::max
+#include <cstdint>     // uint64_t
+#include <atomic>      // std::memory_order
+#include <TFile.h>
+#include <TTree.h>
+#include <TString.h>    
 
 
 
@@ -17,7 +23,7 @@ std::vector<WaveformRecord> read_waveform_file(const std::string& filename);
 
 void ReadBinTrigger_forNovember() {
 
-    std::string filename = "input.bin";
+    std::string filename = "/home/riccardo-speziali/Scrivania/bin_file/sampic_run222.bin";
     auto records = read_waveform_file(filename);
 
     std::cout << "Read " << records.size() << " waveform record(s)\n";
