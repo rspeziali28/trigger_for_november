@@ -8,7 +8,8 @@
 #include <atomic>      // std::memory_order
 #include <TFile.h>
 #include <TTree.h>
-#include <TString.h>    
+#include <TString.h>
+#include <Rtypes.h> 
 
 using namespace std;
 
@@ -16,28 +17,30 @@ using namespace std;
 struct WaveformRecord {
     uint8_t  TriggerIDFPGA;
     uint16_t TriggerIDSRSRaw;
-    uint64_t timestampRaw;   // contiene il valore a 40 bit
+    uint64_t timestampRaw;
 };
+
 
 
 std::vector<WaveformRecord> read_waveform_file(const std::string& filename);
 
 void ReadBinTrigger_forNovember() {
 
-    std::string filename = "/home/riccardo-speziali/Scrivania/bin_file/sampic_run222.bin";
+    std::string filename = "/home/riccardo-speziali/Scrivania/bin_file/Run222_true/Run222/sampic_run1/sampic_run1_trigger_data.bin";
     auto records = read_waveform_file(filename);
 
     
-    TString outfile_name = "output.root";
+    TString outfile_name = "output_new.root";
     TFile outfile(outfile_name,"RECREATE");
 
     TTree *sampic_tree = new TTree("picoTree", "SAMPIC output in ROOT format");
 
     WaveformRecord rec;
 
-    sampic_tree->Branch("TriggerIDFPGA", &rec.TriggerIDFPGA, "TriggerIDFPGA/b");
-    sampic_tree->Branch("TriggerIDSRSRaw", &rec.TriggerIDSRSRaw, "TriggerIDSRSRaw/s");
-    sampic_tree->Branch("timestampRaw", &rec.timestampRaw, "timestampRaw/l");
+   sampic_tree->Branch("TriggerIDFPGA", &rec.TriggerIDFPGA, "TriggerIDFPGA/B");
+   sampic_tree->Branch("TriggerIDSRSRaw", &rec.TriggerIDSRSRaw, "TriggerIDSRSRaw/S");
+   sampic_tree->Branch("timestampRaw", &rec.timestampRaw, "timestampRaw/L");
+
 
     for (const auto& r : records) {
         rec = r;
@@ -64,34 +67,24 @@ std::vector<WaveformRecord> read_waveform_file(const std::string& filename) {
     while (true) {
         WaveformRecord record;
 
-        // Leggi TriggerIDFPGA (1 byte)
-        file.read(reinterpret_cast<char*>(&record.TriggerIDFPGA), sizeof(uint8_t));
-        cout << "Read TriggerIDFPGA: " << static_cast<int>(record.TriggerIDFPGA) << std::endl;
+        if (!file.read(reinterpret_cast<char*>(&record.TriggerIDFPGA), sizeof(UChar_t)))
+            break;
 
-        // Leggi TriggerIDSRSRaw (2 byte)
-        file.read(reinterpret_cast<char*>(&record.TriggerIDSRSRaw), sizeof(uint16_t));
-        cout << "Read TriggerIDSRSRaw: " << record.TriggerIDSRSRaw << std::endl;
+        if (!file.read(reinterpret_cast<char*>(&record.TriggerIDSRSRaw), sizeof(UShort_t)))
+            break;
 
-        // Leggi timestamp a 40 bit (5 byte)
         uint8_t buffer[5];
-        file.read(reinterpret_cast<char*>(buffer), 5);
-        cout << "Read raw timestamp bytes: ";
-        for (int i = 0; i < 5; ++i) {
-            cout << std::hex << static_cast<int>(buffer[i]) << " ";
-        }
-        cout << std::dec << std::endl;
-
-        if (!file) break;
+        if (!file.read(reinterpret_cast<char*>(buffer), 5))
+            break;
 
         record.timestampRaw =
-              (uint64_t)buffer[0]
-            | ((uint64_t)buffer[1] << 8)
-            | ((uint64_t)buffer[2] << 16)
-            | ((uint64_t)buffer[3] << 24)
-            | ((uint64_t)buffer[4] << 32);
+              (ULong64_t)buffer[0]
+            | ((ULong64_t)buffer[1] << 8)
+            | ((ULong64_t)buffer[2] << 16)
+            | ((ULong64_t)buffer[3] << 24)
+            | ((ULong64_t)buffer[4] << 32);
 
         records.push_back(record);
-        cout << "Read timestampRaw: " << record.timestampRaw << std::endl;
     }
 
     return records;
