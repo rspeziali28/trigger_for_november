@@ -10,6 +10,7 @@
 #include <TTree.h>
 #include <TString.h>    
 
+using namespace std;
 
 
 struct WaveformRecord {
@@ -26,8 +27,7 @@ void ReadBinTrigger_forNovember() {
     std::string filename = "/home/riccardo-speziali/Scrivania/bin_file/sampic_run222.bin";
     auto records = read_waveform_file(filename);
 
-    std::cout << "Read " << records.size() << " waveform record(s)\n";
-
+    
     TString outfile_name = "output.root";
     TFile outfile(outfile_name,"RECREATE");
 
@@ -66,13 +66,20 @@ std::vector<WaveformRecord> read_waveform_file(const std::string& filename) {
 
         // Leggi TriggerIDFPGA (1 byte)
         file.read(reinterpret_cast<char*>(&record.TriggerIDFPGA), sizeof(uint8_t));
+        cout << "Read TriggerIDFPGA: " << static_cast<int>(record.TriggerIDFPGA) << std::endl;
 
         // Leggi TriggerIDSRSRaw (2 byte)
         file.read(reinterpret_cast<char*>(&record.TriggerIDSRSRaw), sizeof(uint16_t));
+        cout << "Read TriggerIDSRSRaw: " << record.TriggerIDSRSRaw << std::endl;
 
         // Leggi timestamp a 40 bit (5 byte)
         uint8_t buffer[5];
         file.read(reinterpret_cast<char*>(buffer), 5);
+        cout << "Read raw timestamp bytes: ";
+        for (int i = 0; i < 5; ++i) {
+            cout << std::hex << static_cast<int>(buffer[i]) << " ";
+        }
+        cout << std::dec << std::endl;
 
         if (!file) break;
 
@@ -84,6 +91,7 @@ std::vector<WaveformRecord> read_waveform_file(const std::string& filename) {
             | ((uint64_t)buffer[4] << 32);
 
         records.push_back(record);
+        cout << "Read timestampRaw: " << record.timestampRaw << std::endl;
     }
 
     return records;
