@@ -2,8 +2,8 @@
 #include <fstream>
 #include <vector>
 #include <cstdint>
-
-using namespace std;
+#include "TFile.h"
+#include "TTree.h"
 
 struct TriggerEntry {
     uint64_t TriggerIDSRS;
@@ -34,12 +34,10 @@ std::vector<TriggerEntry> readSAMPICTriggerBinary(const std::string& filename) {
     while (file) {
         // --- Leggi TriggerIDFPGA ---
         file.read(reinterpret_cast<char*>(&TriggerIDFPGA), sizeof(uint8_t));
-        cout << "Read TriggerIDFPGA: " << static_cast<int>(TriggerIDFPGA) << std::endl;
         if (!file) break;
 
         // --- Leggi TriggerIDSRSRaw ---
         file.read(reinterpret_cast<char*>(&TriggerIDSRSRaw), sizeof(uint16_t));
-        cout << "Read TriggerIDSRSRaw: " << TriggerIDSRSRaw << std::endl;
         if (!file) break;
 
         // --- Leggi timestampRaw (5 byte) ---
@@ -79,13 +77,35 @@ std::vector<TriggerEntry> readSAMPICTriggerBinary(const std::string& filename) {
 }
 
 int main() {
-    std::string filename = "/home/riccardo-speziali/Scrivania/bin_file/sampic_run222.bin";
+    std::string filename = "/home/riccardo-speziali/Scrivania/bin_file/Run222_true/Run222/sampic_run1/sampic_run1_trigger_data.bin";
     auto entries = readSAMPICTriggerBinary(filename);
 
     std::cout << "Read " << entries.size() << " entries\n";
-    for (size_t i = 0; i < std::min(entries.size(), size_t(10)); i++) {
-        std::cout << "Entry " << i 
-                  << ": TriggerIDSRS = " << entries[i].TriggerIDSRS 
-                  << ", timestamp = " << entries[i].timestamp << " ns\n";
+
+    // --- Crea un ROOT file ---
+    TFile *f = new TFile("sampic_trigger.root", "RECREATE");
+    TTree *tree = new TTree("triggerTree", "SAMPIC Trigger Data");
+
+    // Variabili per il TTree
+    uint64_t TriggerIDSRS;
+    double timestamp;
+
+    // Branch
+    tree->Branch("TriggerIDSRS", &TriggerIDSRS);
+    tree->Branch("timestamp_ns", &timestamp);
+
+    // Riempi il TTree
+    for (auto &entry : entries) {
+        TriggerIDSRS = entry.TriggerIDSRS;
+        timestamp   = entry.timestamp;
+        tree->Fill();
     }
+
+    // Salva e chiudi
+    tree->Write();
+    f->Close();
+
+    std::cout << "Saved data to sampic_trigger.root\n";
+
+    return 0;
 }
